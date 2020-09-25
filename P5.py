@@ -1,6 +1,4 @@
-
-###Adapted from homework #1
-
+###This code is adpted from homework #1 with edge detection functionality added
 
 import cv2
 import math
@@ -9,6 +7,7 @@ from scipy import ndimage
 
 class Kernal:
 
+	#class from hw1 not used 
 	class Gausinan:
 
 		def __init__(self,N,sigma):
@@ -75,7 +74,7 @@ class Kernal:
 
 
 class Image:
-
+#class from hw1
 	paddingOffset = None
 
 	def __init__(self,fpath):
@@ -114,7 +113,7 @@ class Image:
 		return self.image
 
 
-
+###This code is adpted from homework #1 with edge detection functionality added
 if __name__ == '__main__':
 	fpath = 'boat.png'
 

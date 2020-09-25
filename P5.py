@@ -7,7 +7,7 @@ from scipy import ndimage
 
 class Kernal:
 
-	#class from hw1 not used 
+	#class from hw1 not used
 	class Gausinan:
 
 		def __init__(self,N,sigma):
@@ -39,16 +39,25 @@ class Kernal:
 			self.y = np.array([[1,2,1],[0,0,0],[-1,-2,-1]])*1/4
 			self.idxMin = int(self.N / 2)
 
-		def getGXfromIM(self,image):
+		def getGXfromIM(self,image,threshold = 0,scale =255):
 			image.setPadding(self.idxMin)
-			self.Gx = image.convolve(self,self.x)
+			self.Gx = image.convolve(self,self.x,inplace=False)
 			#self.Gx = ndimage.convolve(image.image, self.x, mode='constant', cval=0.0)
 
-		def getGYfromIM(self,image):
-			image.setPadding(self.idxMin)
-			self.Gy = image.convolve(self,self.y)
+			if threshold !=0:
+				#self.Gx[self.Gx >= threshold] = 255
+				self.Gx[self.Gx < threshold] = 0
+				self.Gx = self.simpScale(self.Gx, scale)
 
-		def getGradMag(self,Ix,Iy,scale=255):
+		def getGYfromIM(self,image,threshold=0,scale=255):
+			image.setPadding(self.idxMin)
+			self.Gy = image.convolve(self,self.y,inplace=False)
+			if threshold !=0:
+				#self.Gy[self.Gy >= threshold] = 255
+				self.Gy[self.Gy < threshold] = 0
+				self.Gy = self.simpScale(self.Gy,scale)
+
+		def getGradMag(self,Ix,Iy,scale=255,threshold=0):
 			print(np.shape(Ix))
 			print(np.shape(Iy))
 			assert np.shape(Ix) == np.shape(Iy)
@@ -62,15 +71,24 @@ class Kernal:
 				j = j + 1
 
 			#simple scale
-			if scale != 0:
-				grad = grad.astype('float64')
-				#grad  *= 255.0/grad.max()
-				grad = (255 * (grad - np.min(grad)) / np.ptp(grad))#addapted from https://stackoverflow.com/questions/1735025/how-to-normalize-a-numpy-array-to-within-a-certain-range
-				grad = grad.astype('uint8')
+			grad = self.simpScale(grad, scale)
+
+			if threshold !=0:
+				grad[grad >= threshold] = 255
+				grad[grad < threshold] = 0
+
+			#grad = self.simpScale(grad, scale)
 
 			return grad
 
-
+		def simpScale(self, arr, scale):
+			if scale != 0:
+				arr = arr.astype('float64')
+				# grad  *= 255.0/grad.max()
+				arr = (scale * (arr - np.min(arr)) / np.ptp(
+					arr))  # addapted from https://stackoverflow.com/questions/1735025/how-to-normalize-a-numpy-array-to-within-a-certain-range
+				arr = arr.astype('uint8')
+			return arr
 
 
 class Image:
@@ -97,9 +115,10 @@ class Image:
 
 
 
-	def convolve(self,k,m):
+	def convolve(self,k,m,inplace = True):
 		#m is kernal matrix
 		#thankfully kernal is symetric so no flipy bois
+		copy = self.image
 		for r in range(self.height):
 			#print(r)
 			for c in range(self.width):
@@ -110,6 +129,11 @@ class Image:
 				self.image[r,c] = cellVal
 		# print("plz")
 		# print(self.image)
+		if not inplace:
+			result = self.image
+			self.image = copy
+			return result
+
 		return self.image
 
 
@@ -121,13 +145,14 @@ if __name__ == '__main__':
 	can = cv2.Canny(Iog.image, 0, 1,3)
 
 	Ix = Image(fpath)
-	print(np.max(Ix.image))
 	Iy = Image(fpath)
-	print(np.max(Iy.image))
 	kern = Kernal.Sobel()
-	kern.getGXfromIM(Ix)
-	kern.getGYfromIM(Iy)
-	grad = kern.getGradMag(kern.Gx, kern.Gy)
+	kern.getGXfromIM(Ix,threshold=240)
+	kern.getGYfromIM(Iy,threshold=240)
+	print(np.max(kern.Gx))
+	print(np.max(kern.Gy))
+
+	grad = kern.getGradMag(kern.Gx, kern.Gy,threshold=150)
 	print(np.max(grad))
 
 

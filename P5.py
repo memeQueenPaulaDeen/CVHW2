@@ -4,6 +4,7 @@ import cv2
 import math
 import numpy as np
 from scipy import ndimage
+import copy
 
 class Kernal:
 
@@ -35,17 +36,18 @@ class Kernal:
 
 		def __init__(self):
 			self.N = 3
-			self.x = np.array([[-1,0,1],[-2,0,2],[-1,0,1]])*1/4
+			self.x = np.array([[1,0,-1],[2,0,-2],[1,0,-1]])*1/4
 			self.y = np.array([[1,2,1],[0,0,0],[-1,-2,-1]])*1/4
 			self.idxMin = int(self.N / 2)
 
 		def getGXfromIM(self,image,threshold = 0,scale =255):
 			image.setPadding(self.idxMin)
 			self.Gx = image.convolve(self,self.x,inplace=False)
-			#self.Gx = ndimage.convolve(image.image, self.x, mode='constant', cval=0.0)
+			#self.Gx = ndimage.convolve(image.image.astype('float64'), self.x, mode='constant', cval=0.0)
 
 			if threshold !=0:
-				#self.Gx[self.Gx >= threshold] = 255
+				#threshold = np.median(self.Gx)+1
+				self.Gx[self.Gx >= threshold] = 255
 				self.Gx[self.Gx < threshold] = 0
 				self.Gx = self.simpScale(self.Gx, scale)
 
@@ -113,12 +115,24 @@ class Image:
 		self.padded = padded
 
 
+	def simpScale(self, arr, scale):
+		if scale != 0:
+			arr = arr.astype('float64')
+			# grad  *= 255.0/grad.max()
+			arr = (scale * (arr - np.min(arr)) / np.ptp(
+				arr))  # addapted from https://stackoverflow.com/questions/1735025/how-to-normalize-a-numpy-array-to-within-a-certain-range
+			arr = arr.astype('uint8')
+		return arr
 
-
-	def convolve(self,k,m,inplace = True):
+	def convolve(self,k,m,inplace = True,scale=255):
 		#m is kernal matrix
 		#thankfully kernal is symetric so no flipy bois
-		copy = self.image
+		m= np.rot90(m,2)
+		cp = copy.deepcopy(self.image)
+
+		self.image = self.image.astype('float64')
+		self.padded = self.padded.astype('float64')
+
 		for r in range(self.height):
 			#print(r)
 			for c in range(self.width):
@@ -129,9 +143,14 @@ class Image:
 				self.image[r,c] = cellVal
 		# print("plz")
 		# print(self.image)
+
+		#will not return raw convo anymore can handling negatives by mag and rescaling
+		self.image = np.abs(self.image)
+		self.image = self.simpScale(self.image,scale)
+
 		if not inplace:
-			result = self.image
-			self.image = copy
+			result = copy.deepcopy(self.image)
+			self.image = cp
 			return result
 
 		return self.image
@@ -142,20 +161,18 @@ if __name__ == '__main__':
 	fpath = 'boat.png'
 
 	Iog = Image(fpath)
-	can = cv2.Canny(Iog.image, 0, 1,3)
+	can = cv2.Canny(Iog.image, 50, 200,3)
 
 	Ix = Image(fpath)
 	Iy = Image(fpath)
 	kern = Kernal.Sobel()
-	kern.getGXfromIM(Ix,threshold=240)
-	kern.getGYfromIM(Iy,threshold=240)
+	kern.getGXfromIM(Ix)
+	kern.getGYfromIM(Iy)
 	print(np.max(kern.Gx))
 	print(np.max(kern.Gy))
 
-	grad = kern.getGradMag(kern.Gx, kern.Gy,threshold=150)
+	grad = kern.getGradMag(kern.Gx, kern.Gy)
 	print(np.max(grad))
-
-
 
 	#sobelx = cv2.Sobel(Iog.image, cv2.CV_64F, 1, 0, ksize=3)
 	#sobely = cv2.Sobel(Iog.image, cv2.CV_64F, 0, 1, ksize=3)

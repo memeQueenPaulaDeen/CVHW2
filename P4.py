@@ -4,33 +4,23 @@ import math
 import matplotlib.pyplot as plt
 
 def g(x,sigma):
-	return float(1/(sigma* math.sqrt(2*math.pi)*math.exp(-(x**2)/(2*sigma**2))))
+	return float(1/(sigma* math.sqrt(2*math.pi))*math.exp(-(x**2)/(2*sigma**2)))
 
 
 
 if __name__ == '__main__':
-	df = pd.DataFrame()
+	df = pd.DataFrame(columns=['s','x','y'])
 
-	x = [i/100 for i in range(-30,30)]
+	x = [i/10 for i in range(-30,30)]
 	#s = [(.5+i/40) for i in range(40)]
-	s = [i/5+.5 for i in range(-30,30)]
-	# domain = []
-	# for x in range (10,50):
-	#
-	# 	for s in range(10):
-	#
-	# 		domain.append([x/10,(.5+s/10)])
-
-	# df['d'] = domain
-	# df['y'] = df.apply(lambda x: g(x.d[0], x.d[1]))
-	# df['x'] = df.apply(lambda x: x.d[0])
-	# df['s'] = df.apply(lambda x: x.d[1])
+	s = [1, 1.1]
+	for sigma in s:
+		for val in x:
+			#df.append(pd.DataFrame.from_dict({'x':val,'s':sigma,'y':g(val,sigma)},orient='columns'))
+			df = df.append({'x':val,'s':sigma,'y':g(val,sigma)},ignore_index=True)
 
 
-
-	df['x'] = x
-	df['s'] = s
-	#df['s'] = -df['x']
+	der = np.array(df.loc[df['s'] == 1]['y'].to_list()) - np.array( df.loc[df['s'] == 1.1]['y'].to_list())
 
 
 	df['yx'] = df.apply(lambda x: g(x.x,1),axis=1)
@@ -38,17 +28,13 @@ if __name__ == '__main__':
 	df['ddyx'] = df['dyx'] - df['dyx'].shift()
 	#df['ddyx'] = df.apply(lambda x: x.ddyx/x.s, axis=1)
 
-	df['dys'] = 0
-	for ss in s:
-		#print(ss)
-		df['ys'] = df.apply(lambda x: g(x.x,ss),axis=1)
-		df['dys'] = df['ys'] - df['dys']
-	#df['dys'] = df.apply(lambda x: x.dys / x.s, axis=1)
 
 
-	plt.plot(x,df['ddyx'])
+
+	plt.plot(x,df.loc[df['s']==1]['ddyx'])
+
 	plt.show()
 
-	plt.plot(s,df['dys'])
+	plt.plot(x,der)
 	plt.show()
 
